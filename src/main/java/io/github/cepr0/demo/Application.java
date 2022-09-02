@@ -1,5 +1,6 @@
 package io.github.cepr0.demo;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.boot.SpringApplication;
@@ -9,10 +10,7 @@ import org.springframework.context.event.EventListener;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.Id;
-import javax.persistence.PrePersist;
+import javax.persistence.*;
 import java.util.UUID;
 
 import static java.util.stream.Collectors.toList;
@@ -22,40 +20,40 @@ import static java.util.stream.IntStream.range;
 @SpringBootApplication
 public class Application {
 
-	private final ModelRepo modelRepo;
+    private final CityRepo cityRepo;
 
-	public Application(ModelRepo modelRepo) {
-		this.modelRepo = modelRepo;
-	}
+    public Application(CityRepo cityRepo) {
+        this.cityRepo = cityRepo;
+    }
 
-	public static void main(String[] args) {
-		SpringApplication.run(Application.class, args);
-	}
+    public static void main(String[] args) {
+        SpringApplication.run(Application.class, args);
+    }
 
-	@EventListener
-	public void onReady(ApplicationReadyEvent e) {
-		modelRepo.saveAll(range(0, 10).mapToObj(Model::new).collect(toList()));
-	}
+    @EventListener
+    public void onReady(ApplicationReadyEvent e) {
+        final long start = System.currentTimeMillis();
+        cityRepo.saveAll(range(1, 10)
+                .mapToObj(i -> new City("beautiful", (int)System.currentTimeMillis()/1000))
+                .collect(toList()));
+        System.out.println("delta = " + (System.currentTimeMillis() - start));
+    }
 
-	@Entity
-	@NoArgsConstructor
-	@Data
-	static class Model {
-		@Id
-		@GeneratedValue
-		private UUID id;
-	   private Integer number;
+    @Entity
+    @NoArgsConstructor
+    @Data
+    static class Model {
+        @Id
+        @GeneratedValue
+        private UUID id;
+        @PrePersist
+        private void prePersist() {
+            id = UUID.randomUUID();
+        }
+    }
 
-		Model(Integer number) {
-			this.number = number;
-		}
+    public interface CityRepo extends JpaRepository<City, Long> {
+    }
 
-		@PrePersist
-		private void prePersist() {
-			id = UUID.randomUUID();
-		}
-	}
 
-	public interface ModelRepo extends JpaRepository<Model, UUID> {
-	}
 }
